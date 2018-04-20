@@ -7,11 +7,22 @@ predict_affordable <- makeClassifTask(id = "affordableApartments",
                                       data = dat, target = "tanie")
 
 all_learners <- listLearners()
-filter(all_learners, type == "classif")[["class"]]
-learnerRF <- makeLearner("classif.randomForest")
-learnerNN <- makeLearner("classif.nnet")
+listLearners("classif", properties = c("prob"))[1L:3, 1L:3]
 
-bench_regr <- benchmark(learners = list(learnerRF,
-                                        learnerNN),
-                        tasks = list(predict_affordable))
+learnerRF <- makeLearner("classif.randomForest", predict.type = "prob")
+learnerNN <- makeLearner("classif.nnet", predict.type = "prob")
 
+cv_scheme <- makeResampleDesc("CV", iters = 5, stratify = TRUE)
+
+resample(learnerNN, predict_affordable, cv_scheme, measures = list(auc))
+
+resample(learnerRF, predict_affordable, cv_scheme, measures = list(auc))
+
+bench_affordable <- benchmark(learners = list(learnerRF, learnerNN),
+                              tasks = predict_affordable,
+                              resamplings = cv_scheme, 
+                              measures = list(auc))
+
+
+model_rf <- train(learnerRF, predict_affordable, subset = 1L:5000)
+predict(model_rf, predict_affordable, subset = 5001L:5853)
