@@ -25,4 +25,6 @@ bench_affordable <- benchmark(learners = list(learnerRF, learnerNN),
 
 
 model_rf <- train(learnerRF, predict_affordable, subset = 1L:5000)
-predict(model_rf, predict_affordable, subset = 5001L:5853)
+preds <- predict(model_rf, predict_affordable, subset = 5001L:5853)
+
+calculateROCMeasures(preds)
