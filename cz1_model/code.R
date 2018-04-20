@@ -28,3 +28,9 @@ model_rf <- train(learnerRF, predict_affordable, subset = 1L:5000)
 preds <- predict(model_rf, predict_affordable, subset = 5001L:5853)
 
 calculateROCMeasures(preds)
+
+
+getParamSet("classif.nnet")
+getParamSet("classif.randomForest")
+
+makeLearner("classif.nnet", predict.type = "prob", size = 5)
