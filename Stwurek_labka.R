@@ -69,7 +69,7 @@ regr_res <- resample(learnerLM, predict_price, trn_scheme, measures = list(rmse,
 getParamSet("classif.nnet")
 getParamSet("classif.randomForest")
 
-learnerNN2 <- makeLearner("classif.nnet", predict.type = "prob", size = 5, decay = 5)
+learnerNN2 <- makeLearner("classif.nnet", predict.type = "prob", size = 5, decay = .2)
 
 parametrs_set <- makeParamSet(
   makeIntegerParam("size", lower = 1, upper = 15),
@@ -89,3 +89,17 @@ benchmark(learners = list(makeLearner("classif.nnet", id = "nonoptimal", predict
                      tasks = predict_affordable,
                      resamplings = cv_scheme,
                      measures = list(auc))
+
+regr_task <- makeRegrTask(id = "affordableAprtaments", data = dat[ , -8], target = "cena_m2")
+
+getParamSet("classif.randomForest")
+
+parameters_set_RF <- makeParamSet(
+  makeIntegerParam("ntree", lower = 100, upper = 1000),
+  makeIntegerParam("mtry", lower = 1, upper = 5)
+)
+
+mbo_ctr <- makeTuneControlMBO(mbo.control = setMBOControlTermination(makeMBOControl(), iters = 2))
+optimal_rf <- tuneParams(makeLearner("regr.randomForest"), regr_task, makeResampleDesc("CV", iters = 3),
+                         par.set = parameters_set_RF, control = mbo_ctr,
+                         show.info = TRUE)
