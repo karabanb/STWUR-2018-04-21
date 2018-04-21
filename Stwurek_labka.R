@@ -49,18 +49,43 @@ bench_affordable_ho <- benchmark(learners = list(learnerRF, learnerNN),
 # 3. Przeridz cene mieszkania (regr.randomForest)
 
 predict_price <- makeRegrTask(id = "housePrices",
-                              data = dat %>%
-                                mutate(., tanie = as.numeric(tanie)) %>%
-                                filter(., cena_m2 < 9000),
+                              data = dat %>% mutate(., tanie = as.numeric(tanie)),
                               target = "cena_m2")
 
 
 learnerLM <- makeLearner(id = "Regresja liniowa",
-                         "regr.lm",
+                         "regr.randomForest",
                          fix.factors.prediction = TRUE )
+
+
 
 trn_scheme <- makeResampleDesc("CV", iters = 5, stratify = FALSE)
 
-resample(learnerLM, predict_price, trn_scheme, measures = list(rmse, rsq, mape))
+regr_res <- resample(learnerLM, predict_price, trn_scheme, measures = list(rmse, rsq, mape))
 
 
+## cz2. - strojenia
+
+getParamSet("classif.nnet")
+getParamSet("classif.randomForest")
+
+learnerNN2 <- makeLearner("classif.nnet", predict.type = "prob", size = 5, decay = 5)
+
+parametrs_set <- makeParamSet(
+  makeIntegerParam("size", lower = 1, upper = 15),
+  makeNumericParam("decay", -5, 5, trafo = function(x) 2^x)
+)
+
+library(mlrMBO)
+
+mbo_ctrl <- makeTuneControlMBO(mbo.control = setMBOControlTermination(makeMBOControl(), iters = 2))
+optimal_nnet <- tuneParams(makeLearner("classif.nnet", predict.type = "prob"), predict_affordable,
+                           cv_scheme, par.set = parametrs_set, measures = list(auc), control = mbo_ctrl)
+
+
+benchmark(learners = list(makeLearner("classif.nnet", id = "nonoptimal", predict.type = "prob"),
+                          makeLearner("classif.nnet", id ="optimal", predict.type = "prob", par.vals = optimal_nnet),
+                          makeLearner("classif.randomForest", predict.type = "prob")),
+                     tasks = predict_affordable,
+                     resamplings = cv_scheme,
+                     measures = list(auc))
